@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>マイク認証テスト</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f0f4f8;
+      padding: 30px;
+    }
+    .btn {
+      padding: 12px 24px;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: none;
+      background: #4f46e5;
+      color: white;
+      cursor: pointer;
+    }
+    .btn-secondary {
+      background: #e2e8f0;
+      color: #1e293b;
+      border: none;
+      margin-top: 10px;
+    }
+    #micAuthStatus {
+      margin-top: 15px;
+      font-weight: bold;
+    }
+    .test-section {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    textarea {
+      width: 100%;
+      height: 120px;
+      margin-top: 20px;
+      padding: 10px;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-section">
+    <h2>🎤 マイク認証テスト</h2>
+    <button class="btn" id="micAuthBtn">マイクの認証</button>
+    <p id="micAuthStatus"></p>
+
+    <button class="btn" id="startTestBtn" style="margin-top:20px;">テスト開始</button>
+    <div id="countdown" style="font-size:1.5rem;margin-top:10px;"></div>
+    <textarea id="voiceInput" placeholder="ここに外部音声入力（例：Windows音声入力やVoice In）でテキストを入力してください"></textarea>
+  </div>
+
+  <script>
+    let microphonePermissionGranted = false;
+
+    function isMicPreviouslyGranted() {
+      return localStorage.getItem('micGranted') === 'true';
+    }
+
+    function setMicGranted() {
+      localStorage.setItem('micGranted', 'true');
+    }
+
+    async function handleMicAuth() {
+      const statusEl = document.getElementById('micAuthStatus');
+
+      if (isMicPreviouslyGranted()) {
+        statusEl.innerText = '✅ すでにマイクの許可は完了しています。';
+        microphonePermissionGranted = true;
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop());
+
+        setMicGranted();
+        microphonePermissionGranted = true;
+        statusEl.innerText = '✅ マイクが許可されました。外部ツールで音声入力してください。';
+      } catch (err) {
+        microphonePermissionGranted = false;
+        statusEl.innerHTML = `
+          ❌ マイクの許可がされませんでした。<br>
+          この機能を使うには許可が必要です。<br>
+          <button class="btn btn-secondary" onclick="alert('ブラウザの設定からマイクを許可してください')">🔧 設定を開く</button>
+        `;
+      }
+    }
+
+    function startVoiceTest() {
+      if (!isMicPreviouslyGranted()) {
+        alert('先に「マイクの認証」を押して、許可を与えてください。');
+        return;
+      }
+
+      const countdownEl = document.getElementById('countdown');
+      let count = 3;
+
+      const countdownInterval = setInterval(() => {
+        countdownEl.textContent = `開始まで: ${count}秒`;
+        count--;
+
+        if (count < 0) {
+          clearInterval(countdownInterval);
+          countdownEl.textContent = 'テスト中... (1分)';
+
+          setTimeout(() => {
+            countdownEl.textContent = '✅ テスト終了';
+          }, 60000);
+        }
+      }, 1000);
+    }
+
+    document.getElementById('micAuthBtn').addEventListener('click', handleMicAuth);
+    document.getElementById('startTestBtn').addEventListener('click', startVoiceTest);
+
+    window.addEventListener('load', () => {
+      if (isMicPreviouslyGranted()) {
+        microphonePermissionGranted = true;
+        document.getElementById('micAuthStatus').textContent = '✅ すでにマイクの許可は完了しています。';
+      }
+    });
+  </script>
+</body>
+</html>
